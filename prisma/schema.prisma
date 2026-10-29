@@ -1,0 +1,122 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String      @id @default(cuid())
+  email        String      @unique
+  passwordHash String
+  createdAt    DateTime    @default(now())
+  restaurant   Restaurant?
+}
+
+model Restaurant {
+  id           String        @id @default(cuid())
+  userId       String        @unique
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slug         String        @unique          // tuapp.com/<slug>
+  name         String
+  description  String?
+  phone        String?
+  address      String?
+  logoUrl      String?
+  coverUrl     String?
+  primaryColor String        @default("#111827")
+  links        Link[]
+  categories   Category[]
+  hours        PickupHours[]
+  orders       Order[]
+  acceptingOrders Boolean    @default(true)
+  minPrepMinutes  Int        @default(30)     // antelación mínima
+  createdAt    DateTime      @default(now())
+}
+
+model Link {                                  // botones tipo Linktree
+  id           String     @id @default(cuid())
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  label        String
+  url          String
+  position     Int        @default(0)
+}
+
+model Category {
+  id           String     @id @default(cuid())
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  name         String
+  position     Int        @default(0)
+  items        MenuItem[]
+}
+
+model MenuItem {
+  id          String      @id @default(cuid())
+  categoryId  String
+  category    Category    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  priceCents  Int                              // siempre en céntimos
+  imageUrl    String?
+  available   Boolean     @default(true)
+  position    Int         @default(0)
+  orderItems  OrderItem[]
+}
+
+model PickupHours {                           // franjas por día de la semana
+  id           String     @id @default(cuid())
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  dayOfWeek    Int                              // 0 = domingo ... 6 = sábado
+  opensAt      String                           // "12:00"
+  closesAt     String                           // "16:00"
+  slotMinutes  Int        @default(15)
+  maxOrdersPerSlot Int    @default(5)
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  READY
+  PICKED_UP
+  CANCELLED
+}
+
+model Order {
+  id            String      @id @default(cuid())
+  restaurantId  String
+  restaurant    Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  number        Int                              // nº correlativo por restaurante
+  customerName  String
+  customerPhone String
+  customerEmail String?
+  notes         String?
+  pickupAt      DateTime
+  status        OrderStatus @default(PENDING)
+  totalCents    Int
+  items         OrderItem[]
+  createdAt     DateTime    @default(now())
+
+  @@unique([restaurantId, number])
+  @@index([restaurantId, pickupAt])
+}
+
+model OrderItem {                              // guardamos copia del nombre y precio
+  id             String   @id @default(cuid())
+  orderId        String
+  order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItemId     String?
+  menuItem       MenuItem? @relation(fields: [menuItemId], references: [id], onDelete: SetNull)
+  nameSnapshot   String
+  priceCentsSnapshot Int
+  quantity       Int
+}
