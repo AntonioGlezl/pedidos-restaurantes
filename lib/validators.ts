@@ -75,3 +75,73 @@ export const hoursSchema = z
     path: ["closesAt"],
     message: "Debe ser posterior a la hora de apertura",
   });
+
+  export const orderSchema = z.object({
+  customerName: z.string().trim().min(2, "Escribe tu nombre").max(60, "Máximo 60 caracteres"),
+  customerPhone: z
+    .string()
+    .trim()
+    .regex(/^\+?[0-9 ]{9,16}$/, "Teléfono no válido"),
+  customerEmail: z
+    .string()
+    .trim()
+    .max(120)
+    .refine((v) => v === "" || z.string().email().safeParse(v).success, "Email no válido"),
+  notes: z.string().trim().max(300, "Máximo 300 caracteres"),
+});
+
+export const cartSchema = z
+  .array(
+    z.object({
+      id: z.string().min(1).max(40),
+      qty: z.coerce.number().int().min(1).max(20),
+    })
+  )
+  .min(1)
+  .max(50);
+
+  /* ───────── Personalización de la página ───────── */
+
+export function normalizeUrl(input: string): string | null {
+  let v = input.trim();
+  if (!v || v.length > 300) return null;
+  if (!/^https?:\/\//i.test(v)) v = `https://${v}`;
+  try {
+    const u = new URL(v);
+    if (!["http:", "https:"].includes(u.protocol)) return null;
+    if (!u.hostname.includes(".")) return null;
+    return u.toString();
+  } catch {
+    return null;
+  }
+}
+
+// El texto de los botones es blanco: el color no puede ser demasiado claro
+export function isReadableColor(hex: string): boolean {
+  const [r, g, b] = [1, 3, 5].map((i) => {
+    const c = parseInt(hex.slice(i, i + 2), 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b <= 0.3;
+}
+
+export const profileSchema = z.object({
+  name: z.string().trim().min(2, "Mínimo 2 caracteres").max(60, "Máximo 60 caracteres"),
+  description: z.string().trim().max(200, "Máximo 200 caracteres"),
+  phone: z
+    .string()
+    .trim()
+    .refine((v) => v === "" || /^\+?[0-9 ]{9,16}$/.test(v), "Teléfono no válido"),
+  address: z.string().trim().max(120, "Máximo 120 caracteres"),
+  primaryColor: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, "Color no válido")
+    .refine(isReadableColor, "Color demasiado claro: el texto blanco no se leería"),
+});
+
+export const slugSchema = registerSchema.shape.slug;
+
+export const linkSchema = z.object({
+  label: z.string().trim().min(1, "Escribe el texto del botón").max(40, "Máximo 40 caracteres"),
+  url: z.string().refine((v) => normalizeUrl(v) !== null, "Enlace no válido (ej. instagram.com/mirestaurante)"),
+});
