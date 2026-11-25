@@ -75,6 +75,7 @@ function fromMinutes(total: number) {
 export type Slot = {
   time: string;        // "13:30" (hora local)
   startsAt: Date;      // instante UTC
+  capacity: number;
   remaining: number;   // pedidos que aún caben
   available: boolean;
 };
@@ -124,7 +125,7 @@ export async function getSlotsForDate(
       if (startsAt.getTime() < earliest) continue;
 
       const remaining = Math.max(0, range.maxOrdersPerSlot - (taken.get(startsAt.getTime()) ?? 0));
-      slots.push({ time, startsAt, remaining, available: remaining > 0 });
+      slots.push({ time, startsAt, capacity: range.maxOrdersPerSlot, remaining, available: remaining > 0 });
     }
   }
   return slots;

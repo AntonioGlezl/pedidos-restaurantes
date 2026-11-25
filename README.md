@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Reservas de restaurantes
 
-## Getting Started
+## Ejecutar con Docker
 
-First, run the development server:
+El entorno de desarrollo se ejecuta completamente dentro de Docker. No necesitas instalar Node.js, npm, Prisma ni PostgreSQL en el equipo local.
+
+La aplicación usa la base de datos PostgreSQL ya alojada en Supabase; el archivo `compose.yml` no crea una base de datos local.
+
+1. Crea o copia `.env` en la raíz del proyecto. Debe contener, como mínimo:
+
+   ```env
+   DATABASE_URL=postgresql://...
+   DIRECT_URL=postgresql://...
+   AUTH_SECRET=...
+   AUTH_URL=http://localhost:3000
+   ```
+
+   Para una base de Supabase, `DATABASE_URL` y `DIRECT_URL` pueden apuntar a la misma instancia. Deja una sola definición de cada variable.
+
+2. Inicia el entorno:
+
+   ```bash
+   docker compose up --build
+   ```
+
+3. Abre [http://localhost:3000](http://localhost:3000).
+
+Al arrancar, el contenedor genera el cliente de Prisma. Las dependencias, el cliente generado y la caché de compilación de Next.js se guardan en volúmenes Docker, no en el sistema local. El proceso se ejecuta con el usuario no privilegiado `node`.
+
+### Migraciones
+
+No ejecutes migraciones automáticamente sobre una base de Supabase existente. Comprueba primero su estado:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+docker compose run --rm --no-deps web npx prisma migrate status
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Solo aplica migraciones cuando quieras que la estructura de la base cambie y hayas revisado el resultado:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+docker compose run --rm --no-deps web npx prisma migrate deploy
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Para detener el entorno:
 
-## Learn More
+```bash
+docker compose down
+```
 
-To learn more about Next.js, take a look at the following resources:
+Para borrar también las dependencias y el cliente Prisma almacenados por Docker:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+docker compose down -v
+```
